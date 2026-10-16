@@ -1,0 +1,63 @@
+name: Build & Release Shikhi Kids APK
+
+on:
+  push:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew || true
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Prepare APK Output
+        run: |
+          mkdir -p build-release
+          cp app/build/outputs/apk/debug/app-debug.apk build-release/ShikhiKids-v1.0.apk
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShikhiKids-APK
+          path: build-release/ShikhiKids-v1.0.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.0
+          name: "Shikhi Kids v1.0.0 (APK Download)"
+          body: |
+            ### 📱 শিখি কিডস (Shikhi Kids) - অ্যান্ড্রয়েড অ্যাপ
+            
+            সরাসরি আপনার মোবাইলে ডাউনলোড করে ইনস্টল করার জন্য নিচের **Assets** বিভাগ থেকে `ShikhiKids-v1.0.apk` ফাইলে ক্লিক করুন।
+            
+            - **ফাইল সাইজ:** ~২৪ মেগাবাইট
+            - **ক্যাটাগরি:** ৩-৮ বছর বয়সী শিশুদের জন্য বাংলা ও ইংরেজি শিক্ষা অ্যাপ
+            - **বৈশিষ্ট্য:** ১০০% অফলাইন, কোন বিজ্ঞাপন নেই, সম্পূর্ণ নিরাপদ
+          files: build-release/ShikhiKids-v1.0.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
